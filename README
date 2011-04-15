@@ -1,0 +1,60 @@
+This is extremely experimental, use at your own risk.
+
+Build the asus-ul30vt-switcheroo.ko kernel modules:
+
+# make
+
+It's recommended to blacklist the nouveau module, so you can
+load this module first:
+
+# echo blacklist nouveau >> /etc/modprobe.d/blacklist.conf
+
+Be sure to then rebuild your initramfs
+
+# dracut -f /boot/initramfs-`uname -r`.img `uname -r`
+
+Don't forget to reboot.
+
+Then put something like this in your /etc/rc.local:
+
+insmod /path/to/asus-ul30vt-switcheroo.ko
+modprobe nouveau
+echo OFF > /sys/kernel/debug/vgaswitcheroo/switch
+
+Or perhaps you want to echo DIS to switch to discrete graphics
+on boot.  Note that we don't seem to actually get to turn off
+the integrated graphics via the ACPI calls.  The i915 shutdown
+hopefully does something useful.
+
+It's probably a good idea to rebuild the module on boot to match
+the running kernel and load the new version, otherwise confusing
+things might happen.
+
+Also note that on resume, the BIOS powers on the discrete graphics.
+This will cause problems if the OS thinks it's still gone.  Turning
+the card back on before sleep and off at resume seems to work:
+
+$ cat /etc/pm/sleep.d/75-ul30vt 
+#!/bin/sh
+
+case "$1" in
+	suspend|hibernate)
+	if [ -e /sys/kernel/debug/vgaswitcheroo/switch ]; then
+		echo ON > /sys/kernel/debug/vgaswitcheroo/switch
+	fi
+	exit 0
+	;;
+	resume|thaw)
+	if [ -e /sys/kernel/debug/vgaswitcheroo/switch ]; then
+		echo OFF > /sys/kernel/debug/vgaswitcheroo/switch
+	fi
+	exit 0
+	;;
+	*)
+	echo "Usage $0 {suspend|hibernate|resume|thaw}"
+	exit 1
+esac
+
+The lid switch is a known issue when running with the discrete
+graphics.  Opening the lid causes a crash through the intel
+driver, which seems to have forgotten it's hardware is disconnected.
