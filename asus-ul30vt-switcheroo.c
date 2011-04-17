@@ -14,10 +14,11 @@
 #include <linux/pci.h>
 #include <linux/acpi.h>
 #include <linux/slab.h>
-#include <acpi/acpi_drivers.h>
-#include <acpi/acpi_bus.h>
-#include <acpi/video.h>
+#include <linux/version.h>
 #include <linux/vga_switcheroo.h>
+#include <acpi/acpi_bus.h>
+#include <acpi/acpi_drivers.h>
+#include <acpi/video.h>
 
 #define DSM_SUPPORTED 0x00
 #define DSM_SUPPORTED_FUNCTIONS 0x00
@@ -34,8 +35,12 @@
 #define DSM_POWER_STAMINA 0x02
 
 static acpi_handle dsm_handle;
-static acpi_handle dis_handle;
+static acpi_handle discrete_handle;
 static acpi_handle igd_handle;
+
+static struct pci_dev *discrete_dev;
+static bool dummy_client;
+static bool dummy_client_switched;
 
 static const char dsm_uuid[] = {
 	0xA0, 0xA0, 0x95, 0x9D, 0x60, 0x00, 0x48, 0x4D,
@@ -117,7 +122,7 @@ static int asus_ul30vt_dsm_switchto(enum vga_switcheroo_client_id id)
 		asus_ul30vt_acpi_mux(igd_handle);
 		dsm_arg = DSM_LED_STAMINA;
 	} else {
-		asus_ul30vt_acpi_mux(dis_handle);
+		asus_ul30vt_acpi_mux(discrete_handle);
 		dsm_arg = DSM_LED_SPEED;
 	}
 
@@ -159,6 +164,34 @@ static struct vga_switcheroo_handler asus_ul30vt_dsm_handler = {
 	.init = asus_ul30vt_dsm_init,
 	.get_client_id = asus_ul30vt_dsm_get_client_id,
 };
+
+static void asus_ul30vt_set_state(struct pci_dev *pdev,
+				  enum vga_switcheroo_state state)
+{
+	if (state == VGA_SWITCHEROO_ON) {
+		printk(KERN_INFO
+		       "UL30VT switcheroo: turning on discrete graphics\n");
+		pci_set_power_state(pdev, PCI_D0);
+		pci_restore_state(pdev);
+		if (pci_enable_device(pdev))
+			printk(KERN_WARNING "UL30VT: failed to enable %s\n",
+			       dev_name(&pdev->dev));
+		pci_set_master(pdev);
+		dummy_client_switched = true;
+	} else {
+		printk(KERN_INFO
+		       "UL30VT switcheroo: turning off discrete graphics\n");
+		pci_save_state(pdev);
+		pci_clear_master(pdev);
+		pci_disable_device(pdev);
+		pci_set_power_state(pdev, PCI_D3hot);
+	}
+}
+
+static bool asus_ul30vt_can_switch(struct pci_dev *pdev)
+{
+	return !dummy_client_switched;
+}
 
 static bool asus_ul30vt_dsm_pci_probe(struct pci_dev *pdev)
 {
@@ -214,10 +247,12 @@ static bool asus_ul30vt_dsm_detect(void)
 		if (!handle)
 			return false;
 
-		if (pdev->vendor == PCI_VENDOR_ID_INTEL)
+		if (pdev->vendor == PCI_VENDOR_ID_INTEL) {
 			igd_handle = handle;
-		else
-			dis_handle = handle;
+		} else {
+			discrete_handle = handle;
+			discrete_dev = pdev;
+		}
 
 		acpi_get_name(handle, ACPI_FULL_PATHNAME, &buf);
 		printk(KERN_INFO "Found VGA device %s (%s): %s\n",
@@ -226,7 +261,7 @@ static bool asus_ul30vt_dsm_detect(void)
 		kfree(buf.pointer);
 	}
 
-	if (vga_count == 2 && dsm_handle && igd_handle && dis_handle) {
+	if (vga_count == 2 && dsm_handle && igd_handle && discrete_handle) {
 		struct acpi_buffer buf = { ACPI_ALLOCATE_BUFFER, NULL };
 
 		acpi_get_name(dsm_handle, ACPI_FULL_PATHNAME, &buf);
@@ -239,23 +274,40 @@ static bool asus_ul30vt_dsm_detect(void)
 	return false;
 }
 
-static int __init asus_ul30vt_register_dsm_handler(void)
+static int __init asus_ul30vt_init(void)
 {
 	if (!asus_ul30vt_dsm_detect())
 		return 0;
 
 	vga_switcheroo_register_handler(&asus_ul30vt_dsm_handler);
+
+	if (dummy_client)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
+		vga_switcheroo_register_client(discrete_dev,
+					       asus_ul30vt_set_state, NULL,
+					       asus_ul30vt_can_switch);
+#else
+		vga_switcheroo_register_client(discrete_dev,
+					       asus_ul30vt_set_state,
+					       asus_ul30vt_can_switch);
+#endif
 	return 0;
 }
 
-static void __exit asus_ul30vt_unregister_dsm_handler(void)
+static void __exit asus_ul30vt_exit(void)
 {
+	if (dummy_client)
+		vga_switcheroo_unregister_client(discrete_dev);
 	vga_switcheroo_unregister_handler();
 }
 
-module_init(asus_ul30vt_register_dsm_handler);
-module_exit(asus_ul30vt_unregister_dsm_handler);
+module_init(asus_ul30vt_init);
+module_exit(asus_ul30vt_exit);
+
+module_param(dummy_client, bool, 0444);
+MODULE_PARM_DESC(dummy_client, "Enable dummy VGA switcheroo client support");
 
 MODULE_AUTHOR("Alex Williamson <alex.williamson@redhat.com>");
 MODULE_DESCRIPTION("Experimental Asus UL30VT hybrid graphics switcheroo");
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("GPL v2");
+MODULE_VERSION("0.1");
