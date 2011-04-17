@@ -1,6 +1,6 @@
 This is extremely experimental, use at your own risk.
 
-Build the asus-ul30vt-switcheroo.ko kernel modules:
+Build the asus-switcheroo.ko kernel modules:
 
 # make
 
@@ -17,7 +17,7 @@ Don't forget to reboot.
 
 Then put something like this in your /etc/rc.local:
 
-insmod /path/to/asus-ul30vt-switcheroo.ko
+insmod /path/to/asus-switcheroo.ko
 modprobe nouveau
 echo OFF > /sys/kernel/debug/vgaswitcheroo/switch
 

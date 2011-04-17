@@ -1,4 +1,4 @@
-obj-m := asus-ul30vt-switcheroo.o
+obj-m := asus-switcheroo.o
 
 KDIR := /lib/modules/$(shell uname -r)/build
 PWD := $(shell pwd)

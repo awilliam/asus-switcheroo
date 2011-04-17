@@ -5,7 +5,7 @@
  *
  * Copyright 2011 Red Hat, Inc
  *
- * Author: Alex Williamson <alex.williamson@redhat.com
+ * Author: Alex Williamson <alex.williamson@redhat.com>
  *
  * This work is licensed under the terms of the GNU GPL, version 2.  See
  * the COPYING file in the top-level directory.
@@ -47,7 +47,7 @@ static const char dsm_uuid[] = {
 	0xB3, 0x4D, 0x7E, 0x5F, 0xEA, 0x12, 0x9F, 0xD4,
 };
 
-static int asus_ul30vt_dsm_call(acpi_handle handle, int func, int arg)
+static int asus_switcheroo_dsm_call(acpi_handle handle, int func, int arg)
 {
 	struct acpi_buffer output = { ACPI_ALLOCATE_BUFFER, NULL };
 	struct acpi_object_list input;
@@ -88,7 +88,7 @@ static int asus_ul30vt_dsm_call(acpi_handle handle, int func, int arg)
 	return 0;
 }
 
-static int asus_ul30vt_acpi_mux(acpi_handle handle)
+static int asus_switcheroo_acpi_mux(acpi_handle handle)
 {
 	struct acpi_object_list input;
 	union acpi_object param;
@@ -114,23 +114,23 @@ static int asus_ul30vt_acpi_mux(acpi_handle handle)
 	return 0;
 }
 
-static int asus_ul30vt_dsm_switchto(enum vga_switcheroo_client_id id)
+static int asus_switcheroo_switchto(enum vga_switcheroo_client_id id)
 {
 	int dsm_arg;
 
 	if (id == VGA_SWITCHEROO_IGD) {
-		asus_ul30vt_acpi_mux(igd_handle);
+		asus_switcheroo_acpi_mux(igd_handle);
 		dsm_arg = DSM_LED_STAMINA;
 	} else {
-		asus_ul30vt_acpi_mux(discrete_handle);
+		asus_switcheroo_acpi_mux(discrete_handle);
 		dsm_arg = DSM_LED_SPEED;
 	}
 
-	return asus_ul30vt_dsm_call(dsm_handle, DSM_LED, dsm_arg);
+	return asus_switcheroo_dsm_call(dsm_handle, DSM_LED, dsm_arg);
 }
 
-static int asus_ul30vt_dsm_power_state(enum vga_switcheroo_client_id id,
-				       enum vga_switcheroo_state state)
+static int asus_switcheroo_power_state(enum vga_switcheroo_client_id id,
+				     enum vga_switcheroo_state state)
 {
 	int dsm_arg;
 
@@ -142,15 +142,15 @@ static int asus_ul30vt_dsm_power_state(enum vga_switcheroo_client_id id,
 	else
 		dsm_arg = DSM_POWER_STAMINA;
 
-	return asus_ul30vt_dsm_call(dsm_handle, DSM_POWER, dsm_arg);
+	return asus_switcheroo_dsm_call(dsm_handle, DSM_POWER, dsm_arg);
 }
 
-static int asus_ul30vt_dsm_init(void)
+static int asus_switcheroo_handler_init(void)
 {
 	return 0;
 }
 
-static int asus_ul30vt_dsm_get_client_id(struct pci_dev *pdev)
+static int asus_switcheroo_get_client_id(struct pci_dev *pdev)
 {
 	if (pdev->vendor == PCI_VENDOR_ID_INTEL)
 		return VGA_SWITCHEROO_IGD;
@@ -158,15 +158,15 @@ static int asus_ul30vt_dsm_get_client_id(struct pci_dev *pdev)
 	return VGA_SWITCHEROO_DIS;
 }
 
-static struct vga_switcheroo_handler asus_ul30vt_dsm_handler = {
-	.switchto = asus_ul30vt_dsm_switchto,
-	.power_state = asus_ul30vt_dsm_power_state,
-	.init = asus_ul30vt_dsm_init,
-	.get_client_id = asus_ul30vt_dsm_get_client_id,
+static struct vga_switcheroo_handler asus_dsm_handler = {
+	.switchto = asus_switcheroo_switchto,
+	.power_state = asus_switcheroo_power_state,
+	.init = asus_switcheroo_handler_init,
+	.get_client_id = asus_switcheroo_get_client_id,
 };
 
-static void asus_ul30vt_set_state(struct pci_dev *pdev,
-				  enum vga_switcheroo_state state)
+static void asus_switcheroo_set_state(struct pci_dev *pdev,
+				      enum vga_switcheroo_state state)
 {
 	if (state == VGA_SWITCHEROO_ON) {
 		printk(KERN_INFO
@@ -188,12 +188,12 @@ static void asus_ul30vt_set_state(struct pci_dev *pdev,
 	}
 }
 
-static bool asus_ul30vt_can_switch(struct pci_dev *pdev)
+static bool asus_switcheroo_can_switch(struct pci_dev *pdev)
 {
 	return !dummy_client_switched;
 }
 
-static bool asus_ul30vt_dsm_pci_probe(struct pci_dev *pdev)
+static bool asus_switcheroo_dsm_pci_probe(struct pci_dev *pdev)
 {
 	acpi_handle handle, test_handle;
 	acpi_status status;
@@ -208,8 +208,8 @@ static bool asus_ul30vt_dsm_pci_probe(struct pci_dev *pdev)
 		return false;
 	}
 
-	ret = asus_ul30vt_dsm_call(handle, DSM_SUPPORTED,
-				   DSM_SUPPORTED_FUNCTIONS);
+	ret = asus_switcheroo_dsm_call(handle, DSM_SUPPORTED,
+				       DSM_SUPPORTED_FUNCTIONS);
 	if (ret < 0)
 		return false;
 
@@ -227,7 +227,7 @@ static bool asus_ul30vt_dsm_pci_probe(struct pci_dev *pdev)
 	return true;
 }
 
-static bool asus_ul30vt_dsm_detect(void)
+static bool asus_switcheroo_dsm_detect(void)
 {
 	struct pci_dev *pdev = NULL;
 	int class = PCI_CLASS_DISPLAY_VGA << 8;
@@ -240,7 +240,7 @@ static bool asus_ul30vt_dsm_detect(void)
 		vga_count++;
 
 		/* The _DSM actually exists on both devices on this system */
-		if (!asus_ul30vt_dsm_pci_probe(pdev))
+		if (!asus_switcheroo_dsm_pci_probe(pdev))
 			return false;
 
 		handle = DEVICE_ACPI_HANDLE(&pdev->dev);
@@ -274,35 +274,35 @@ static bool asus_ul30vt_dsm_detect(void)
 	return false;
 }
 
-static int __init asus_ul30vt_init(void)
+static int __init asus_switcheroo_init(void)
 {
-	if (!asus_ul30vt_dsm_detect())
+	if (!asus_switcheroo_dsm_detect())
 		return 0;
 
-	vga_switcheroo_register_handler(&asus_ul30vt_dsm_handler);
+	vga_switcheroo_register_handler(&asus_dsm_handler);
 
 	if (dummy_client)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
 		vga_switcheroo_register_client(discrete_dev,
-					       asus_ul30vt_set_state, NULL,
-					       asus_ul30vt_can_switch);
+					       asus_switcheroo_set_state, NULL,
+					       asus_switcheroo_can_switch);
 #else
 		vga_switcheroo_register_client(discrete_dev,
-					       asus_ul30vt_set_state,
-					       asus_ul30vt_can_switch);
+					       asus_switcheroo_set_state,
+					       asus_switcheroo_can_switch);
 #endif
 	return 0;
 }
 
-static void __exit asus_ul30vt_exit(void)
+static void __exit asus_switcheroo_exit(void)
 {
 	if (dummy_client)
 		vga_switcheroo_unregister_client(discrete_dev);
 	vga_switcheroo_unregister_handler();
 }
 
-module_init(asus_ul30vt_init);
-module_exit(asus_ul30vt_exit);
+module_init(asus_switcheroo_init);
+module_exit(asus_switcheroo_exit);
 
 module_param(dummy_client, bool, 0444);
 MODULE_PARM_DESC(dummy_client, "Enable dummy VGA switcheroo client support");
