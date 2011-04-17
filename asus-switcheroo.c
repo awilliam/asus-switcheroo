@@ -1,5 +1,5 @@
 /*
- * VGA switcheroo driver for ASUS UL30VT (and possibly similar)
+ * VGA switcheroo driver for ASUS laptops
  *
  * Based on drivers/gpu/drm/nouveau/nouveau_acpi.c
  *
@@ -170,17 +170,18 @@ static void asus_switcheroo_set_state(struct pci_dev *pdev,
 {
 	if (state == VGA_SWITCHEROO_ON) {
 		printk(KERN_INFO
-		       "UL30VT switcheroo: turning on discrete graphics\n");
+		       "Asus switcheroo: turning on discrete graphics\n");
 		pci_set_power_state(pdev, PCI_D0);
 		pci_restore_state(pdev);
 		if (pci_enable_device(pdev))
-			printk(KERN_WARNING "UL30VT: failed to enable %s\n",
+			printk(KERN_WARNING
+			       "Asus switcher: failed to enable %s\n",
 			       dev_name(&pdev->dev));
 		pci_set_master(pdev);
 		dummy_client_switched = true;
 	} else {
 		printk(KERN_INFO
-		       "UL30VT switcheroo: turning off discrete graphics\n");
+		       "Asus switcheroo: turning off discrete graphics\n");
 		pci_save_state(pdev);
 		pci_clear_master(pdev);
 		pci_disable_device(pdev);
@@ -266,7 +267,7 @@ static bool asus_switcheroo_dsm_detect(void)
 
 		acpi_get_name(dsm_handle, ACPI_FULL_PATHNAME, &buf);
 		printk(KERN_INFO
-		       "UL30VT switcheroo: detected DSM switching method "
+		       "Asus switcheroo: detected DSM switching method "
 		       "%s handle\n", (char *)buf.pointer);
 		kfree(buf.pointer);
 		return true;
@@ -308,6 +309,6 @@ module_param(dummy_client, bool, 0444);
 MODULE_PARM_DESC(dummy_client, "Enable dummy VGA switcheroo client support");
 
 MODULE_AUTHOR("Alex Williamson <alex.williamson@redhat.com>");
-MODULE_DESCRIPTION("Experimental Asus UL30VT hybrid graphics switcheroo");
+MODULE_DESCRIPTION("Experimental Asus hybrid graphics switcheroo");
 MODULE_LICENSE("GPL v2");
 MODULE_VERSION("0.1");

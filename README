@@ -35,8 +35,7 @@ This will cause problems if the OS thinks it's still gone.  Turning
 the card back on before sleep and off at resume seems to work.  Do
 the following to put a script in place to handle this automatically.
 
-cp asus-switcher-suspend-resume.sh \
-   /etc/pm/sleep.d/75-asus-switcher-suspend-resume.sh
+cp asus-switcheroo-pm /etc/pm/sleep.d/75-asus-switcheroo
 
 The lid switch is a known issue when running with the discrete
 graphics.  Opening the lid causes a crash through the intel
