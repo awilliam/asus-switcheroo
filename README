@@ -1,42 +1,72 @@
 This is extremely experimental, use at your own risk.
 
+It seems to work in my Asus UL30VT and I see other DSDTs from
+Asus systems that look similar, YMMV.
+
 Build the asus-switcheroo.ko kernel modules:
 
 # make
 
-It's recommended to blacklist the nouveau module, so you can
-load this module first:
+On a Fedora system, you can then install with:
 
-# echo blacklist nouveau >> /etc/modprobe.d/blacklist.conf
+# sudo make install
 
-Be sure to then rebuild your initramfs
+This will:
 
-# dracut -f /boot/initramfs-`uname -r`.img `uname -r`
+ - copy the kernel module in place
+ - update modprobe.d to load asus-switcheroo before nouveau
+ - update dracut to add asus-switcheroo
+ - install the suspend/resume script
+ - run depmod
+ - build a new initramfs
 
-Don't forget to reboot.
+For other distros, do something similar.
 
-Then put something like this in your /etc/rc.local:
+For simply disabling the discrete graphics, the only other thing
+you need to do (aside from rebooting), is:
 
-insmod /path/to/asus-switcheroo.ko
-modprobe nouveau
-echo OFF > /sys/kernel/debug/vgaswitcheroo/switch
+# echo OFF > /sys/kernel/debug/vgaswitcheroo/switch
 
-Or perhaps you want to echo DIS to switch to discrete graphics
-on boot.  Note that we don't seem to actually get to turn off
-the integrated graphics via the ACPI calls.  The i915 shutdown
-hopefully does something useful.
+If this isn't automatically mounted for you, add this to your
+/etc/fstab:
 
-It's probably a good idea to rebuild the module on boot to match
-the running kernel and load the new version, otherwise confusing
-things might happen.
+debugfs		/sys/kernel/debug	debugfs	defaults	0 0
 
-Also note that on resume, the BIOS powers on the discrete graphics.
-This will cause problems if the OS thinks it's still gone.  Turning
-the card back on before sleep and off at resume seems to work.  Do
-the following to put a script in place to handle this automatically.
+See the suspend resume script for a description of an issue
+and workaround for suspend resume and powering off the other
+device.
 
-cp asus-switcheroo-pm /etc/pm/sleep.d/75-asus-switcheroo
+If you want to run with nouveau graphics, echo DIS to the
+above switch file.  The LVDS will go black, but if you start
+X after the switch, it has been known to work.  Plugging in
+an HDMI monitor also seems to kick the text mode into working
+and will continue working when the monitor is unplugged.
 
-The lid switch is a known issue when running with the discrete
-graphics.  Opening the lid causes a crash through the intel
-driver, which seems to have forgotten it's hardware is disconnected.
+When running with the discrete graphics, there seem to be
+numerous issues with the Intel driver forgetting that it
+turned off it's hardware.  For instance in VT mode, if
+left idle, the Intel driver will try to attempt to turn
+the LVDS off even though the hardware has been put to sleep,
+resulting in an oops.  I've also seen an oops when opening
+the lid when using discrete graphcis via nouveau where the
+Intel driver gets the lid notification and tries to touch
+the hardware.
+
+Using the discrete graphics is generally not recommended
+for an average user.  Patches welcome to make this better.
+
+It is also possible, though very, very alpha and extremely
+not recommended for average users to use the asus-switcheroo
+module as a dummy switcheroo client that allows you to run
+the proprietary nvidia module.  To do this, blacklist
+nouveau and rebuild your initramfs to get nouveau out of it.
+Use the dummy-client=1 option for asus-switcheroo, if loaded
+from initramfs, use asus-switcher.dummy-client=1.  At boot,
+switch to DIS, modprobe nvidia, then start X using the nvidia
+proprietary driver.  Note that the screen LVDS will go black
+as soon as you switch via DIS and will not come back until X
+starts.  Unlike nouveau above, there is no framebuffer driver
+with nvidia, so text mode access is gone.  All of the above
+nouveau problems are also expected to happen with nvidia.
+Also, when using the dummy-client, the switch to discrete
+graphics is a one-way street.  Reboot to re-enable IGD.
