@@ -1,0 +1,12 @@
+.*.swp
+.asus-switcheroo.ko.cmd
+.asus-switcheroo.mod.o.cmd
+.asus-switcheroo.o.cmd
+.tmp_versions/
+*~
+Module.symvers
+asus-switcheroo.ko
+asus-switcheroo.mod.c
+asus-switcheroo.mod.o
+asus-switcheroo.o
+modules.order
