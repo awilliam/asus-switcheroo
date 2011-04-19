@@ -1,4 +1,4 @@
-obj-m := asus-switcheroo.o
+obj-m := asus-switcheroo.o i915-jprobe.o
 
 KDIR := /lib/modules/$(shell uname -r)/build
 PWD := $(shell pwd)
