@@ -18,8 +18,8 @@
 #include <linux/vga_switcheroo.h>
 #include <linux/workqueue.h>
 
-struct notifier_block *i915_lid_nb;
-int (*i915_lid_notify)(struct notifier_block *, unsigned long , void *);
+static struct notifier_block *i915_lid_nb;
+static int (*i915_lid_notify)(struct notifier_block *, unsigned long , void *);
 
 static int my_dummy_lid_notify(struct notifier_block *nb, unsigned long val,
 			       void *unused)

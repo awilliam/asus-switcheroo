@@ -15,6 +15,7 @@
 #include <linux/acpi.h>
 #include <linux/slab.h>
 #include <linux/version.h>
+#include <linux/kallsyms.h>
 #include <linux/vga_switcheroo.h>
 #include <acpi/acpi_bus.h>
 #include <acpi/acpi_drivers.h>
@@ -114,9 +115,26 @@ static int asus_switcheroo_acpi_mux(acpi_handle handle)
 	return 0;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,37)
+static void asus_switcheroo_force_nouveau_reprobe(void)
+{
+	void *dev = pci_get_drvdata(discrete_dev);
+	void (*nouveau_fbcon_hook)(void *);
+
+	nouveau_fbcon_hook =
+		(void *)kallsyms_lookup_name("nouveau_fbcon_output_poll_changed");
+
+	if (!nouveau_fbcon_hook) {
+		printk("Can't hook to nouveau_fbcon_output_poll_changed\n");
+		return;
+	}
+	nouveau_fbcon_hook(dev);
+}
+#endif
+
 static int asus_switcheroo_switchto(enum vga_switcheroo_client_id id)
 {
-	int dsm_arg;
+	int ret, dsm_arg;
 
 	if (id == VGA_SWITCHEROO_IGD) {
 		asus_switcheroo_acpi_mux(igd_handle);
@@ -126,7 +144,12 @@ static int asus_switcheroo_switchto(enum vga_switcheroo_client_id id)
 		dsm_arg = DSM_LED_SPEED;
 	}
 
-	return asus_switcheroo_dsm_call(dsm_handle, DSM_LED, dsm_arg);
+	ret = asus_switcheroo_dsm_call(dsm_handle, DSM_LED, dsm_arg);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,37)
+	if (id == VGA_SWITCHEROO_DIS && !dummy_client)
+		asus_switcheroo_force_nouveau_reprobe();
+#endif
+	return ret;
 }
 
 static int asus_switcheroo_power_state(enum vga_switcheroo_client_id id,
