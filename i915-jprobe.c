@@ -16,6 +16,7 @@
 #include <linux/kallsyms.h>
 #include <linux/notifier.h>
 #include <linux/vga_switcheroo.h>
+#include <linux/workqueue.h>
 
 struct notifier_block *i915_lid_nb;
 int (*i915_lid_notify)(struct notifier_block *, unsigned long , void *);
@@ -52,11 +53,21 @@ static struct jprobe my_i915_switcheroo_set_state_jprobe = {
 	.entry = (kprobe_opcode_t *)my_i915_switcheroo_set_state
 };
 
+static void i915_register_jprobe(struct work_struct *work)
+{
+	if (register_jprobe(&my_i915_switcheroo_set_state_jprobe) < 0) {
+		printk("Failed to register i915 jprobe\n");
+		i915_lid_notify = NULL;
+		return;
+	}
+	printk("i915 jprobe registered\n");
+}
+
+static DECLARE_WORK(i915_jprobe_register_work, i915_register_jprobe);
+
 static int my_acpi_lid_notifier_register(struct notifier_block *nb)
 {
 	if (!i915_lid_notify) {
-		int ret;
-
 		i915_lid_notify = (void *)kallsyms_lookup_name("intel_lid_notify");
 		if (!i915_lid_notify)
 			goto done;
@@ -67,13 +78,7 @@ static int my_acpi_lid_notifier_register(struct notifier_block *nb)
 			i915_lid_notify = NULL;
 			goto done;
 		}
-
-		ret = register_jprobe(&my_i915_switcheroo_set_state_jprobe);
-		if (ret < 0) {
-			i915_lid_notify = NULL;
-			goto done;
-		}
-		printk("Found i915 entry points\n");
+		schedule_work(&i915_jprobe_register_work);
 	}
 
 	if (nb->notifier_call == i915_lid_notify) {
