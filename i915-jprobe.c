@@ -10,8 +10,6 @@
  * the COPYING file in the top-level directory.
  */
 
-#include <linux/kernel.h>
-#include <linux/module.h>
 #include <linux/kprobes.h>
 #include <linux/kallsyms.h>
 #include <linux/notifier.h>
@@ -24,7 +22,6 @@ static int (*i915_lid_notify)(struct notifier_block *, unsigned long , void *);
 static int my_dummy_lid_notify(struct notifier_block *nb, unsigned long val,
 			       void *unused)
 {
-	printk("Dummy i915 lid notify called\n");
 	return NOTIFY_OK;
 }
 
@@ -57,6 +54,7 @@ static void i915_register_jprobe(struct work_struct *work)
 {
 	if (register_jprobe(&my_i915_switcheroo_set_state_jprobe) < 0) {
 		printk("Failed to register i915 jprobe\n");
+		my_i915_switcheroo_set_state_jprobe.kp.addr = NULL;
 		i915_lid_notify = NULL;
 		return;
 	}
@@ -95,7 +93,7 @@ static struct jprobe my_acpi_lid_notifier_register_jprobe = {
 	.entry = (kprobe_opcode_t *)my_acpi_lid_notifier_register
 };
 
-int init_module(void)
+int __init i915_jprobe_init(void)
 {
 	int ret;
 
@@ -116,13 +114,16 @@ int init_module(void)
 	return 0;
 }
 
-void cleanup_module(void)
+void __exit i915_jprobe_exit(void)
 {
 	unregister_jprobe(&my_acpi_lid_notifier_register_jprobe);
 	if (my_i915_switcheroo_set_state_jprobe.kp.addr)
 		unregister_jprobe(&my_i915_switcheroo_set_state_jprobe);
 	printk("Unregistered i915/lid jprobe\n");
 }
+
+module_init(i915_jprobe_init);
+module_exit(i915_jprobe_exit);
 
 MODULE_AUTHOR("Alex Williamson <alex.williamson@redhat.com>");
 MODULE_DESCRIPTION("Jprobe hack to fix i915 bugs when device is disabled");

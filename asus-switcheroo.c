@@ -334,4 +334,4 @@ MODULE_PARM_DESC(dummy_client, "Enable dummy VGA switcheroo client support");
 MODULE_AUTHOR("Alex Williamson <alex.williamson@redhat.com>");
 MODULE_DESCRIPTION("Experimental Asus hybrid graphics switcheroo");
 MODULE_LICENSE("GPL v2");
-MODULE_VERSION("0.1");
+MODULE_VERSION("0.2");

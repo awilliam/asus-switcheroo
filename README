@@ -1,33 +1,73 @@
-This is extremely experimental, use at your own risk.
+These drivers are for Asus laptops with integrated Intel
+graphics and discrete Nvidia graphics.  To see if this
+might work only your laptop, disassemble your DSDT and
+look for a _DSM method similar to this:
 
-It seems to work in my Asus UL30VT and I see other DSDTs from
-Asus systems that look similar, YMMV.
+    Method (_DSM, 4, NotSerialized)
+    {
+        If (LEqual (Arg0, Buffer (0x10)
+                {
+                    /* 0000 */    0xA0, 0xA0, 0x95, 0x9D, 0x60, 0x00, 0x48, 0x4D,
+                    /* 0008 */    0xB3, 0x4D, 0x7E, 0x5F, 0xEA, 0x12, 0x9F, 0xD4
+                }))
+        {
+        ...
 
-Build the asus-switcheroo.ko kernel modules:
+Also check to see that you have both MXMX and MXDS methods:
+
+    Method (MXMX, 1, NotSerialized)
+    {
+    ...
+
+    Method (MXDS, 1, NotSerialized)
+    {
+    ...
+
+You'll need two sets of these, one for each gfx device.
+
+These drivers will not work if the system has only the "optimus"
+_DSM.  Sorry, I don't have a laptop with that to hack on.
+
+This works pretty well on my Asus UL30VT, and we've seen some
+reports that it works on other Asus laptops as well.
+
+To get started:
+
+Build the asus-switcheroo kernel modules:
 
 # make
 
-On a Fedora system, you can then install with:
+To install, pick your distro from
 
-# sudo make install
+# sudo make install-fedora
+# sudo make install-ubuntu
+# sudo make install-arch
 
-This will:
+If these don't do what you need, reproduce these steps on your
+distribution:
 
- - copy the kernel module in place
+ - copy the kernel modules in place (*.ko)
  - update modprobe.d to load asus-switcheroo before nouveau
- - update dracut to add asus-switcheroo
+ - update modprobe.d to load i915-jprobe before i915
+ - add asus-switcher and i915-jprobe to the initramfs conf files
  - install the suspend/resume script
  - run depmod
  - build a new initramfs
 
-For other distros, do something similar.
+Please post instructions for your distribution if you come up
+with working steps.  Each provided install target also has
+a corresponding uninstall target.  Note you will need to reboot
+after install to make use of the modules as they're loaded from
+the initramfs.
+
+Using it:
 
 For simply disabling the discrete graphics, the only other thing
-you need to do (aside from rebooting), is:
+you need to do is:
 
 # echo OFF > /sys/kernel/debug/vgaswitcheroo/switch
 
-If this isn't automatically mounted for you, add this to your
+If debugfs isn't automatically mounted for you, add this to your
 /etc/fstab:
 
 debugfs		/sys/kernel/debug	debugfs	defaults	0 0
@@ -37,23 +77,19 @@ and workaround for suspend resume and powering off the other
 device.
 
 If you want to run with nouveau graphics, echo DIS to the
-above switch file.  The LVDS will go black, but if you start
-X after the switch, it has been known to work.  Plugging in
-an HDMI monitor also seems to kick the text mode into working
-and will continue working when the monitor is unplugged.
+above switch file.  Note that this will not work if X is
+already running.  You can run DDIS to the switch file for
+a delayed switch when X restarts.
 
-When running with the discrete graphics, there seem to be
-numerous issues with the Intel driver forgetting that it
-turned off it's hardware.  For instance in VT mode, if
-left idle, the Intel driver will try to attempt to turn
-the LVDS off even though the hardware has been put to sleep,
-resulting in an oops.  I've also seen an oops when opening
-the lid when using discrete graphcis via nouveau where the
-Intel driver gets the lid notification and tries to touch
-the hardware.
+The asus-switcheroo module now includes a workaround for older
+kernels where nouveau does not reprobe devices whe we
+switch to it.  This fixes the black screen issue when using
+the discrete gfx with the nouveau driver we had previosly.
 
-Using the discrete graphics is generally not recommended
-for an average user.  Patches welcome to make this better.
+The i915-jprobe module also comes into play when the Intel
+gfx is turned off.  This module dynamically fixes a bug in
+the Intel driver and prevents the Intel lid notifier from
+being called when the Intel gfx is turned off.
 
 It is also possible, though very, very alpha and extremely
 not recommended for average users to use the asus-switcheroo
@@ -65,8 +101,6 @@ from initramfs, use asus-switcher.dummy-client=1.  At boot,
 switch to DIS, modprobe nvidia, then start X using the nvidia
 proprietary driver.  Note that the screen LVDS will go black
 as soon as you switch via DIS and will not come back until X
-starts.  Unlike nouveau above, there is no framebuffer driver
-with nvidia, so text mode access is gone.  All of the above
-nouveau problems are also expected to happen with nvidia.
-Also, when using the dummy-client, the switch to discrete
-graphics is a one-way street.  Reboot to re-enable IGD.
+starts.  There is no framebuffer driver in this mode, so you
+will only have X.  This switch is one way, you'll need to
+reboot to get Intel graphics back.

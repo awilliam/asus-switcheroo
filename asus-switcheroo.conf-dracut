@@ -1,1 +1,1 @@
-add_drivers+="asus-switcheroo"
+add_drivers_l="$add_drivers_l asus-switcheroo i915-jprobe"
