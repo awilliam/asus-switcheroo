@@ -1,6 +1,6 @@
 These drivers are for Asus laptops with integrated Intel
 graphics and discrete Nvidia graphics.  To see if this
-might work only your laptop, disassemble your DSDT and
+might work on your laptop, disassemble your DSDT and
 look for a _DSM method similar to this:
 
     Method (_DSM, 4, NotSerialized)
@@ -62,8 +62,8 @@ the initramfs.
 
 Using it:
 
-For simply disabling the discrete graphics, the only other thing
-you need to do is:
+For simply disabling the discrete graphics to save power, the
+only other thing you need to do is:
 
 # echo OFF > /sys/kernel/debug/vgaswitcheroo/switch
 
@@ -72,8 +72,8 @@ If debugfs isn't automatically mounted for you, add this to your
 
 debugfs		/sys/kernel/debug	debugfs	defaults	0 0
 
-See the suspend resume script for a description of an issue
-and workaround for suspend resume and powering off the other
+See the suspend/resume script for a description of an issue
+and workaround for suspend/resume and powering off the other
 device.
 
 If you want to run with nouveau graphics, echo DIS to the
@@ -82,9 +82,9 @@ already running.  You can run DDIS to the switch file for
 a delayed switch when X restarts.
 
 The asus-switcheroo module now includes a workaround for older
-kernels where nouveau does not reprobe devices whe we
+kernels where nouveau does not reprobe devices when we
 switch to it.  This fixes the black screen issue when using
-the discrete gfx with the nouveau driver we had previosly.
+the discrete gfx with the nouveau driver we had previously.
 
 The i915-jprobe module also comes into play when the Intel
 gfx is turned off.  This module dynamically fixes a bug in
