@@ -115,7 +115,7 @@ static int asus_switcheroo_acpi_mux(acpi_handle handle)
 	return 0;
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,37)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38)
 static void asus_switcheroo_force_nouveau_reprobe(void)
 {
 	void *dev = pci_get_drvdata(discrete_dev);
@@ -145,7 +145,7 @@ static int asus_switcheroo_switchto(enum vga_switcheroo_client_id id)
 	}
 
 	ret = asus_switcheroo_dsm_call(dsm_handle, DSM_LED, dsm_arg);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,37)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38)
 	if (id == VGA_SWITCHEROO_DIS && !dummy_client)
 		asus_switcheroo_force_nouveau_reprobe();
 #endif
@@ -306,7 +306,7 @@ static int __init asus_switcheroo_init(void)
 	vga_switcheroo_register_handler(&asus_dsm_handler);
 
 	if (dummy_client)
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38)
 		vga_switcheroo_register_client(discrete_dev,
 					       asus_switcheroo_set_state, NULL,
 					       asus_switcheroo_can_switch);
