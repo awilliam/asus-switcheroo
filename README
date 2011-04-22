@@ -104,3 +104,118 @@ as soon as you switch via DIS and will not come back until X
 starts.  There is no framebuffer driver in this mode, so you
 will only have X.  This switch is one way, you'll need to
 reboot to get Intel graphics back.
+
+Theory of operation
+
+asus-switcheroo:
+
+The vga switcher subsystem is designed for two clients and
+one handler.  The clients are the actual graphics drivers,
+for this laptop, the Intel i915 and Nvidia nouveau.  The
+client has device specific callbacks to set the device state
+and let us know whether a switch is possible (ie. making
+sure the device isn't already opened by X).  Newer kernels
+also have a reprobe trigger to tell the graphics driver to
+go discover what outputs it's connected to.  All of these
+are a mix of driver/device specific with a bit of generic
+PCI callbacks.
+
+The handler primarly manages the multiplexing for the
+displays between the devices (ex. which device is connected
+to LVDS) and low level power control.  It appears that all
+of the handlers we have today are ACPI based.
+
+asus-switcher is an ACPI based handler (ignoring the
+dummy client for the moment).  As noted above, the vga
+switcheroo subsystem only uses one handler, first come
+first served, which is why we need to load the asus-switcheroo
+module before nouveau.
+
+The handler in nouveau_acpi is nearly correct and provides
+the basis for asus-switcheroo.  The difference are:
+
+1) The last parameter to the _DSM call in nouveau_acpi is
+   wrong and doesn't follow the ACPI spec.  The Asus DSDT
+   does operations on this parameter that are undefined for
+   the parameter type nouveau_acpi uses.
+
+2) There's no multiplexer control.
+
+The only difficulty to fixing the first problem is making
+sure we don't break whatever the current code works on.  In
+asus-switcheroo, we don't care, since it's targettd at one
+vendor.
+
+The second problem is more difficult.  I had originally
+been trying to hack on Dave Airlie's drm tree, following
+his example of using the WMI MXM interface, hoping there
+was mux control burried somewhere in there.  Unfortunately
+the call he's relying on to switch the mux on his T410s,
+"MXDS", doesn't exist in the Asus WMI interface.  However
+we do have MXDS methods we can call directly, one under
+each graphics device in ACPI, which matches what the
+T410s WMI call does.  I proceeded to poke these from
+userspace with acpi_call, but didn't have much luck.  By
+trial and error, I was able to find that calling the MXMX
+method on the device before calling the MXDS method
+produced the right switch.
+
+So, the mux formula for this ACPI implementation is to
+simply call MXMX followed by MXDS, and for this DSDT,
+the parameters don't seem to matter much.  This is
+where it would be nice to see and actual MXM spec to
+get the right parameters and better understand the
+relationship between these two calls.
+
+The last piece is to hack back in the reprobe operation
+that Dave has added to new kernels.  nouveau already
+has the resulting function call that the reprobe in newer
+kernels use, so it's just a matter of getting to it.
+
+As for the dummy client facility, to enable vga switcheroo
+we need two clients and one handler.  We have the i915
+client and asus-switcheroo as a hander.  Much of the client
+control is simply bringing the device up to PCI D0 power
+state when we turn it on, and putting it in D3hot to turn
+it off.  So, that's effectively all the dummy client does.
+This much is sufficient that we use the handler to power
+on the discrete graphics and switch the display multiplexer
+to the right output, then use the dummy client to wake
+up the device and restore it's state.  From there the
+proprietary nvidia driver can make use of it.
+
+i915-jprobe:
+
+This module is mostly just a fun little jprobe hack.  When
+we switch to discrete graphics and close the laptop lid,
+we get a kernel oops because the i915 driver is still
+getting notified of laptop events and tries to poke the
+hardware.
+
+We have to implement this hack in two stages to get all
+the right entry points.  First we insert a jprobe for
+the acpi_lid_notifier_register() function.  This means
+we get called any time a driver calls that function and
+we get passed the same parameters that the real function
+gets.  When that jprobe gets triggered, we can look to
+see if some of the i915 symbols are resolvable, meaning
+the i915 driver is now loaded, then we can compare
+whether the notifier block callback is for the i915
+lid notifier function.  At that point, we have a pointer
+to the notifier block and can change the callback
+function pointer to call our dummy notifier function
+instead of the i915 version.  Registering one more jprobe
+on i915_switcheroo_set_state() allows us to set and reset
+that function callback when we switch devices.  We have
+to use a workqueue to register that jprobe because parts
+of the registration call functions that can sleep and
+the jprobe callback where we enable this is called with
+interrupts disabled.
+
+Overall, this is ~130 lines of code that do the equivalent
+of the 3 line proposed upstream patch:
+
+http://lists.freedesktop.org/archives/dri-devel/2011-April/010488.html
+
+But, it fixes it in an existing kernel, which is
+pretty cool.
