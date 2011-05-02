@@ -11,6 +11,7 @@
  * the COPYING file in the top-level directory.
  */
 
+#include <linux/delay.h>
 #include <linux/pci.h>
 #include <linux/acpi.h>
 #include <linux/slab.h>
@@ -155,7 +156,7 @@ static int asus_switcheroo_switchto(enum vga_switcheroo_client_id id)
 static int asus_switcheroo_power_state(enum vga_switcheroo_client_id id,
 				     enum vga_switcheroo_state state)
 {
-	int dsm_arg;
+	int ret, dsm_arg;
 
 	if (id == VGA_SWITCHEROO_IGD)
 		return 0;
@@ -165,7 +166,12 @@ static int asus_switcheroo_power_state(enum vga_switcheroo_client_id id,
 	else
 		dsm_arg = DSM_POWER_STAMINA;
 
-	return asus_switcheroo_dsm_call(dsm_handle, DSM_POWER, dsm_arg);
+	ret = asus_switcheroo_dsm_call(dsm_handle, DSM_POWER, dsm_arg);
+
+	if (state == VGA_SWITCHEROO_ON)
+		msleep(10);
+
+	return ret;
 }
 
 static int asus_switcheroo_handler_init(void)
