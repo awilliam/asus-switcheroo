@@ -61,8 +61,8 @@ install-arch:
 	depmod -a
 	install -m 0755 asus-switcheroo-pm /etc/pm/sleep.d/75-asus-switcheroo-pm
 	install -m 0644 asus-switcheroo.conf-modprobe.d /etc/modprobe.d/asus-switcheroo.conf
-	sed -i -e "/asus-switcheroo i915-jprobe nouveau-jprobe/D" /etc/rc.conf
-	sed -i -e "s/MODULES=(/MODULES=(asus-switcheroo i915-jprobe nouveau-jprobe/" /etc/rc.conf
+	sed -i -e "s/asus-switcheroo i915-jprobe nouveau-jprobe //" /etc/rc.conf
+	sed -i -e "s/MODULES=(/MODULES=(asus-switcheroo i915-jprobe nouveau-jprobe /" /etc/rc.conf
 	cp /boot/kernel26.img /boot/kernel26.img.bak
 	mkinitcpio -p kernel26
 
@@ -71,5 +71,5 @@ uninstall-arch:
 	depmod -a
 	rm -f /etc/pm/sleep.d/75-asus-switcheroo-pm
 	rm -f /etc/modprobe.d/asus-switcheroo.conf
-	sed -i -e "/asus-switcheroo i915-jprobe nouveau-jprobe/D" /etc/rc.conf
+	sed -i -e "s/asus-switcheroo i915-jprobe nouveau-jprobe //" /etc/rc.conf
 	mkinitcpio -p kernel26
