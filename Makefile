@@ -1,4 +1,4 @@
-obj-m := asus-switcheroo.o i915-jprobe.o nouveau-jprobe.o
+obj-m := asus-switcheroo.o i915-jprobe.o nouveau-jprobe.o byo-switcheroo.o
 
 KDIR := /lib/modules/$(shell uname -r)/build
 PWD := $(shell pwd)
@@ -11,6 +11,7 @@ clean:
 
 install-fedora:
 	install -m 0644 -D asus-switcheroo.ko /lib/modules/$(shell uname -r)/extra/asus-switcheroo/asus-switcheroo.ko
+	install -m 0644 -D byo-switcheroo.ko /lib/modules/$(shell uname -r)/extra/asus-switcheroo/byo-switcheroo.ko
 	install -m 0644 -D i915-jprobe.ko /lib/modules/$(shell uname -r)/extra/asus-switcheroo/i915-jprobe.ko
 	install -m 0644 -D nouveau-jprobe.ko /lib/modules/$(shell uname -r)/extra/asus-switcheroo/nouveau-jprobe.ko
 	depmod -a
@@ -30,6 +31,7 @@ uninstall-fedora:
 	
 install-ubuntu:
 	install -m 0644 -D asus-switcheroo.ko /lib/modules/$(shell uname -r)/extra/asus-switcheroo/asus-switcheroo.ko
+	install -m 0644 -D byo-switcheroo.ko /lib/modules/$(shell uname -r)/extra/asus-switcheroo/byo-switcheroo.ko
 	install -m 0644 -D i915-jprobe.ko /lib/modules/$(shell uname -r)/extra/asus-switcheroo/i915-jprobe.ko
 	install -m 0644 -D nouveau-jprobe.ko /lib/modules/$(shell uname -r)/extra/asus-switcheroo/nouveau-jprobe.ko
 	depmod -a
@@ -56,6 +58,7 @@ uninstall-ubuntu:
 
 install-arch:
 	install -m 0644 -D asus-switcheroo.ko /lib/modules/$(shell uname -r)/extra/asus-switcheroo/asus-switcheroo.ko
+	install -m 0644 -D byo-switcheroo.ko /lib/modules/$(shell uname -r)/extra/asus-switcheroo/byo-switcheroo.ko
 	install -m 0644 -D i915-jprobe.ko /lib/modules/$(shell uname -r)/extra/asus-switcheroo/i915-jprobe.ko
 	install -m 0644 -D nouveau-jprobe.ko /lib/modules/$(shell uname -r)/extra/asus-switcheroo/nouveau-jprobe.ko
 	depmod -a
