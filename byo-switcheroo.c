@@ -383,16 +383,16 @@ static int __init byo_switcheroo_init(void)
 			printk(KERN_INFO "BYO-switcheroo preloading scripts for Asus UL30VT\n");
 			power_state_dis_off = kzalloc(strlen(UL30VT_DIS_OFF) + 1, GFP_KERNEL);
 			if (power_state_dis_off)
-				memcpy(power_state_dis_off, UL30VT_DIS_OFF, strlen(UL30VT_DIS_OFF));
+				sprintf(power_state_dis_off, "%s", UL30VT_DIS_OFF);
 			power_state_dis_on = kzalloc(strlen(UL30VT_DIS_ON) + 1, GFP_KERNEL);
 			if (power_state_dis_on)
-				memcpy(power_state_dis_on, UL30VT_DIS_ON, strlen(UL30VT_DIS_ON));
+				sprintf(power_state_dis_on, "%s", UL30VT_DIS_ON);
 			switchto_dis = kzalloc(strlen(UL30VT_SWITCHTO_DIS) + 1, GFP_KERNEL);
 			if (switchto_dis)
-				memcpy(switchto_dis, UL30VT_SWITCHTO_DIS, strlen(UL30VT_SWITCHTO_DIS));
+				sprintf(switchto_dis, "%s", UL30VT_SWITCHTO_DIS);
 			switchto_igd = kzalloc(strlen(UL30VT_SWITCHTO_IGD) + 1, GFP_KERNEL);
 			if (switchto_igd)
-				memcpy(switchto_igd, UL30VT_SWITCHTO_IGD, strlen(UL30VT_SWITCHTO_IGD));
+				sprintf(switchto_igd, "%s", UL30VT_SWITCHTO_IGD);
 			if (!power_state_dis_off || !power_state_dis_on || !switchto_dis || !switchto_igd)
 				printk(KERN_ERR "BYO-switcheroo unable to allocate buffer for preload\n");
 		}
