@@ -21,17 +21,23 @@
 #include <acpi/video.h>
 
 static int igd_vendor = PCI_VENDOR_ID_INTEL;
-static char *switchto_igd = NULL;
-static char *switchto_dis = NULL;
-static char *power_state_igd_on = NULL;
-static char *power_state_igd_off = NULL;
-static char *power_state_dis_on = NULL;
-static char *power_state_dis_off = NULL;
+static char *model;
+static char *switchto_igd;
+static char *switchto_dis;
+static char *power_state_igd_on;
+static char *power_state_igd_off;
+static char *power_state_dis_on;
+static char *power_state_dis_off;
 static bool dummy_client;
 static bool dummy_client_switched;
 
 static struct pci_dev *igd_dev, *dis_dev;
 static acpi_handle igd_handle, dis_handle;
+
+#define UL30VT_DIS_OFF "_DSM {0xA0,0xA0,0x95,0x9D,0x60,0x00,0x48,0x4D,0xB3,0x4D,0x7E,0x5F,0xEA,0x12,0x9F,0xD4} 0x102 0x3 {0x2,0x0,0x0,0x0}"
+#define UL30VT_DIS_ON  "_DSM {0xA0,0xA0,0x95,0x9D,0x60,0x00,0x48,0x4D,0xB3,0x4D,0x7E,0x5F,0xEA,0x12,0x9F,0xD4} 0x102 0x3 {0x1,0x0,0x0,0x0}; !mdelay 100"
+#define UL30VT_SWITCHTO_DIS "MXMX 0x1; MXDS 0x1; _DSM {0xA0,0xA0,0x95,0x9D,0x60,0x00,0x48,0x4D,0xB3,0x4D,0x7E,0x5F,0xEA,0x12,0x9F,0xD4} 0x102 0x2 {0x12,0x0,0x0,0x0}; !nouveau_fbcon_output_poll_changed"
+#define UL30VT_SWITCHTO_IGD "MXMX 0x1; MXDS 0x1; _DSM {0xA0,0xA0,0x95,0x9D,0x60,0x00,0x48,0x4D,0xB3,0x4D,0x7E,0x5F,0xEA,0x12,0x9F,0xD4} 0x102 0x2 {0x11,0x0,0x0,0x0}"
 
 static acpi_status do_acpi_call(const char *method, int argc, union acpi_object *argv)
 {
@@ -178,6 +184,9 @@ static void run_special(char *cmd)
 			return;
 		}
 		func(dev);
+	} else if (!strncmp(cmd, "mdelay ", 7) && isdigit(cmd[7])) {
+		int ms = simple_strtol(cmd + 7, NULL, 0);
+		mdelay(ms);
 	}
 }
 
@@ -368,6 +377,26 @@ static int __init byo_switcheroo_init(void)
 		else
 			printk(KERN_INFO "BYO-switcheroo dummy client registered\n");
 	}
+
+	if (model) {
+		if (!strcmp(model, "AsusUL30VT")) {
+			printk(KERN_INFO "BYO-switcheroo preloading scripts for Asus UL30VT\n");
+			power_state_dis_off = kzalloc(strlen(UL30VT_DIS_OFF) + 1, GFP_KERNEL);
+			if (power_state_dis_off)
+				memcpy(power_state_dis_off, UL30VT_DIS_OFF, strlen(UL30VT_DIS_OFF));
+			power_state_dis_on = kzalloc(strlen(UL30VT_DIS_ON) + 1, GFP_KERNEL);
+			if (power_state_dis_on)
+				memcpy(power_state_dis_on, UL30VT_DIS_ON, strlen(UL30VT_DIS_ON));
+			switchto_dis = kzalloc(strlen(UL30VT_SWITCHTO_DIS) + 1, GFP_KERNEL);
+			if (switchto_dis)
+				memcpy(switchto_dis, UL30VT_SWITCHTO_DIS, strlen(UL30VT_SWITCHTO_DIS));
+			switchto_igd = kzalloc(strlen(UL30VT_SWITCHTO_IGD) + 1, GFP_KERNEL);
+			if (switchto_igd)
+				memcpy(switchto_igd, UL30VT_SWITCHTO_IGD, strlen(UL30VT_SWITCHTO_IGD));
+			if (!power_state_dis_off || !power_state_dis_on || !switchto_dis || !switchto_igd)
+				printk(KERN_ERR "BYO-switcheroo unable to allocate buffer for preload\n");
+		}
+	}
 	return 0;
 }
 
@@ -385,6 +414,10 @@ module_param(dummy_client, bool, 0444);
 MODULE_PARM_DESC(dummy_client, "Enable dummy VGA switcheroo client support");
 
 module_param(igd_vendor, int, 0444);
+MODULE_PARM_DESC(igd_vendor, "PCI vendor ID of integrated graphics device (default 0x8086)");
+
+module_param(model, charp, 0444);
+MODULE_PARM_DESC(model, "Use pre-defined scripts for known model");
 
 module_param(switchto_igd, charp, 0644);
 module_param(switchto_dis, charp, 0644);
