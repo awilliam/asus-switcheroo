@@ -84,7 +84,7 @@ install-opensuse:
         install -m 0644 -D nouveau-jprobe.ko /lib/modules/$(shell uname -r)/extra/asus-switcheroo/nouveau-jprobe.ko
         depmod -a
         install -m 0755 asus-switcheroo-pm /etc/pm/sleep.d/75-asus-switcheroo-pm
-        install -m 0644 asus-switcheroo.conf-modprobe.d /etc/modprobe.d/asus-switcheroo.conf
+        install -m 0644 asus-switcheroo.conf-modprobe.d /etc/modprobe.d/50-asus-switcheroo.conf
         sed -i -e "s/asus-switcheroo i915-jprobe nouveau-jprobe //" /etc/sysconfig/kernel
         sed -i -e "s/INITRD_MODULES=\"/INITRD_MODULES=\"asus-switcheroo i915-jprobe nouveau-jprobe /" /etc/sysconfig/kernel
         cp /boot/initrd-$(shell uname -r) /boot/initrd-$(shell uname -r).bak
@@ -95,6 +95,6 @@ uninstall-opensuse:
         rm -fr /lib/modules/$(shell uname -r)/extra/asus-switcheroo
         depmod -a
         rm -f /etc/pm/sleep.d/75-asus-switcheroo-pm
-        rm -f /etc/modprobe.d/asus-switcheroo.conf
+        rm -f /etc/modprobe.d/50-asus-switcheroo.conf
         sed -i -e "s/asus-switcheroo i915-jprobe nouveau-jprobe//" /etc/sysconfig/kernel
         mkinitrd
