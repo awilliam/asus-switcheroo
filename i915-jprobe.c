@@ -10,6 +10,7 @@
  * the COPYING file in the top-level directory.
  */
 
+#include <linux/module.h>
 #include <linux/kprobes.h>
 #include <linux/kallsyms.h>
 #include <linux/notifier.h>
