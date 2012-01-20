@@ -9,6 +9,8 @@
  * the COPYING file in the top-level directory.
  */
 
+#include <linux/moduleparam.h>
+#include <linux/module.h>
 #include <linux/delay.h>
 #include <linux/pci.h>
 #include <linux/acpi.h>
