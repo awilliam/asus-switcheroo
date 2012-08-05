@@ -9,6 +9,21 @@ default:
 clean:
 	$(MAKE) -C $(KDIR) M=$(PWD) clean
 
+install-slackware:
+	install -m 0644 -D asus-switcheroo.ko /lib/modules/$(shell uname -r)/extra/asus-switcheroo/asus-switcheroo.ko
+	install -m 0644 -D byo-switcheroo.ko /lib/modules/$(shell uname -r)/extra/asus-switcheroo byo-switcheroo.ko
+	install -m 0644 -D i915-jprobe.ko /lib/modules/$(shell uname -r)/extra/asus-switcheroo/i915-jprobe.ko
+	install -m 0644 -D nouveau-jprobe.ko /lib/modules/$(shell uname -r)/extra/asus-switcheroo/nouveau-jprobe.ko
+		depmod -a
+	install -m 0755 asus-switcheroo-pm /etc/pm/sleep.d/75-asus-switcheroo-pm
+	install -m 0644 asus-switcheroo.conf-modprobe.d /etc/modprobe.d/50-asus-switcheroo.conf
+
+uninstall-slackware:
+	rm -rf /lib/modules/$(shell uname -r)extra/asus-switcheroo
+	depmod -a
+	rm -f /etc/pm/sleep.d/75-asus-switcheroo-pm
+	rm -f /etc/modprobe.d/50-asus-switcheroo.conf
+
 install-fedora:
 	install -m 0644 -D asus-switcheroo.ko /lib/modules/$(shell uname -r)/extra/asus-switcheroo/asus-switcheroo.ko
 	install -m 0644 -D byo-switcheroo.ko /lib/modules/$(shell uname -r)/extra/asus-switcheroo/byo-switcheroo.ko
