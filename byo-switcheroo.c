@@ -328,6 +328,14 @@ static bool dummy_switcheroo_can_switch(struct pci_dev *pdev)
 	return !dummy_client_switched;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
+struct vga_switcheroo_client_ops byo_switcheroo_ops = {
+	.set_gpu_state = dummy_switcheroo_set_state,
+	.reprobe = NULL,
+	.can_switch = dummy_switcheroo_can_switch,
+};
+#endif
+
 static int __init byo_switcheroo_init(void)
 {
 	struct pci_dev *pdev = NULL;
@@ -365,7 +373,9 @@ static int __init byo_switcheroo_init(void)
 	printk(KERN_INFO "BYO-switcheroo handler registered\n");
 
 	if (dummy_client) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
+		vga_switcheroo_register_client(dis_dev, &byo_switcheroo_ops);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38)
 		ret = vga_switcheroo_register_client(dis_dev,
 						     dummy_switcheroo_set_state, NULL,
 						     dummy_switcheroo_can_switch);

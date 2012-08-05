@@ -306,6 +306,14 @@ static bool asus_switcheroo_dsm_detect(void)
 	return false;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
+struct vga_switcheroo_client_ops asus_switcheroo_ops = {
+	.set_gpu_state = asus_switcheroo_set_state,
+	.reprobe = NULL,
+	.can_switch = asus_switcheroo_can_switch,
+};
+#endif
+
 static int __init asus_switcheroo_init(void)
 {
 	if (!asus_switcheroo_dsm_detect())
@@ -314,7 +322,10 @@ static int __init asus_switcheroo_init(void)
 	vga_switcheroo_register_handler(&asus_dsm_handler);
 
 	if (dummy_client)
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
+		vga_switcheroo_register_client(discrete_dev,
+					       &asus_switcheroo_ops);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38)
 		vga_switcheroo_register_client(discrete_dev,
 					       asus_switcheroo_set_state, NULL,
 					       asus_switcheroo_can_switch);
